@@ -1,4 +1,3 @@
-"""
 """Preprocessing Module.
 
 Prepares data for machine learning models.
@@ -42,8 +41,12 @@ def preprocess_data(df):
     
     # Split features and target
     print("\n--- Feature-Target Separation ---")
-    # Drop 'id' (not useful for predictions)
-    feature_matrix = df_ready.drop(['cardio', 'id'], axis=1)
+    # Remove 'id' column if it exists
+    if 'id' in df_ready.columns:
+        df_ready = df_ready.drop(['id'], axis=1)
+    if 'cardio' not in df_ready.columns:
+        raise KeyError("Target column 'cardio' not found in data")
+    feature_matrix = df_ready.drop(['cardio'], axis=1)
     target_vector = df_ready['cardio']
     
     print(f"Feature matrix shape: {feature_matrix.shape}")
@@ -76,7 +79,7 @@ def preprocess_data(df):
     print(f"  Standard Dev (should be ~1): {scaled_stds}")
     
     # Done
-    print(f"\n--- Preprocessing Done ---"}
+    print("\n--- Preprocessing Done ---")
     print(f"Input: {feature_matrix.shape}")
     print(f"Output: {feature_matrix_scaled.shape}")
     print(f"Target: {target_vector.shape}")

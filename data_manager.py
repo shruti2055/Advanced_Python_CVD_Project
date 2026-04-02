@@ -1,4 +1,3 @@
-"""
 """Data Manager Module.
 
 Loads raw CSV data and cleans it.
@@ -27,21 +26,23 @@ def load_data(filepath):
     print("LOADING DATASET")
     print("=" * 60)
     
-    # Load CSV—dataset uses semicolon as delimiter
-    raw_data = pd.read_csv(filepath, sep=';')
+    try:
+        raw_data = pd.read_csv(filepath, sep=';')
+    except Exception as err:
+        print(f"Could not load data from {filepath}: {err}")
+        raise
     
-    # Print basic info
     print(f"\nDataset loaded successfully")
     print(f"Shape: {raw_data.shape[0]} rows x {raw_data.shape[1]} columns")
-    
+
     print("\n--- Column Names and Data Types ---")
     print(raw_data.dtypes)
-    
+
     print("\n--- First 5 Rows ---")
     print(raw_data.head())
-    
+
     print("\n--- Dataset Info ---")
-    print(raw_data.info())
+    raw_data.info()
     
     return raw_data
 
@@ -67,13 +68,11 @@ def clean_data(df):
     print("DATA CLEANING")
     print("=" * 60)
     
-    # Make a copy so we don't change the original
     cleaned_df = df.copy()
     initial_row_count = cleaned_df.shape[0]
     
     print(f"\nInitial shape: {cleaned_df.shape}")
     
-    # Remove duplicate records
     print("\n--- Checking for Duplicates ---")
     num_duplicates = cleaned_df.duplicated().sum()
     print(f"Duplicate records found: {num_duplicates}")
@@ -81,7 +80,6 @@ def clean_data(df):
         cleaned_df = cleaned_df.drop_duplicates()
         print(f"After deduplication: {cleaned_df.shape[0]} rows")
     
-    # Handle missing values
     print("\n--- Missing Values Summary ---")
     missing_count = cleaned_df.isnull().sum()
     if missing_count.sum() == 0:
@@ -91,29 +89,31 @@ def clean_data(df):
         cleaned_df = cleaned_df.dropna()
         print(f"Records after dropna: {cleaned_df.shape[0]}")
     
-    # Filter out invalid measurements
     print("\n--- Filtering Invalid Values ---")
-    
-    # Blood pressure should be positive and within physiological range
-    invalid_ap_hi = (cleaned_df['ap_hi'] < 0).sum()
-    invalid_ap_lo = (cleaned_df['ap_lo'] < 0).sum()
-    print(f"Negative systolic BP: {invalid_ap_hi}")
-    print(f"Negative diastolic BP: {invalid_ap_lo}")
-    
-    rows_before_bp_filter = cleaned_df.shape[0]
-    # Keep only positive values and exclude extreme outliers
-    cleaned_df = cleaned_df[(cleaned_df['ap_hi'] > 0) & (cleaned_df['ap_lo'] > 0)]
-    cleaned_df = cleaned_df[(cleaned_df['ap_hi'] <= 300) & (cleaned_df['ap_lo'] <= 300)]
-    rows_removed_bp = rows_before_bp_filter - cleaned_df.shape[0]
-    
-    if rows_removed_bp > 0:
-        print(f"Removed {rows_removed_bp} records with invalid BP")
-    
-    # Height and weight must be positive
-    cleaned_df = cleaned_df[(cleaned_df['height'] > 0) & (cleaned_df['weight'] > 0)]
-    print(f"Filtered records with invalid height/weight")
-    
-    # Summary
+
+    # Only perform BP checks if these columns exist
+    if 'ap_hi' in cleaned_df.columns and 'ap_lo' in cleaned_df.columns:
+        invalid_ap_hi = (cleaned_df['ap_hi'] < 0).sum()
+        invalid_ap_lo = (cleaned_df['ap_lo'] < 0).sum()
+        print(f"Negative systolic BP: {invalid_ap_hi}")
+        print(f"Negative diastolic BP: {invalid_ap_lo}")
+
+        rows_before_bp_filter = cleaned_df.shape[0]
+        cleaned_df = cleaned_df[(cleaned_df['ap_hi'] > 0) & (cleaned_df['ap_lo'] > 0)]
+        cleaned_df = cleaned_df[(cleaned_df['ap_hi'] <= 300) & (cleaned_df['ap_lo'] <= 300)]
+        rows_removed_bp = rows_before_bp_filter - cleaned_df.shape[0]
+        if rows_removed_bp > 0:
+            print(f"Removed {rows_removed_bp} records with invalid BP")
+    else:
+        print("BP columns missing, skipping BP checks")
+
+    # Height and weight checks
+    if 'height' in cleaned_df.columns and 'weight' in cleaned_df.columns:
+        cleaned_df = cleaned_df[(cleaned_df['height'] > 0) & (cleaned_df['weight'] > 0)]
+        print("Filtered records with invalid height/weight")
+    else:
+        print("Height/weight columns missing, skipping height/weight checks")
+
     print(f"\n--- Cleaning Summary ---")
     print(f"Final shape: {cleaned_df.shape}")
     total_rows_removed = initial_row_count - cleaned_df.shape[0]
