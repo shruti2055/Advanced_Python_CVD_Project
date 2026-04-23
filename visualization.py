@@ -1,142 +1,211 @@
-"""Visualization Module.
+"""Visualization module.
 
-Creates plots to explore the data.
-Shows distributions, correlations, and the target variable.
+Create plots to explore dataset features and model performance.
 """
 
-import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
 
 
 def plot_distributions(df):
-    """
-    Show histograms for key numerical features.
-    
-    Parameters
-    ----------
-    df : pd.DataFrame
-        Cleaned dataset
-    """
+    """Plot the distributions of key numeric variables."""
     print("\n" + "=" * 60)
     print("PLOTTING DISTRIBUTIONS")
     print("=" * 60)
 
-    feature_list = ['age', 'height', 'weight', 'ap_hi', 'ap_lo']
-    available_features = [f for f in feature_list if f in df.columns]
-
-    if len(available_features) == 0:
-        print("No expected numeric features available for distribution plots")
+    plot_features = [name for name in ['age', 'height', 'weight', 'ap_hi', 'ap_lo'] if name in df.columns]
+    if not plot_features:
+        print("No numeric features found for distribution plotting")
         return
 
-    n = len(available_features)
-    ncols = 2
-    nrows = (n + ncols - 1) // ncols
+    rows = (len(plot_features) + 1) // 2
+    fig, axes = plt.subplots(rows, 2, figsize=(12, 4 * rows))
+    axes = axes.flatten()
 
-    fig, axes = plt.subplots(nrows, ncols, figsize=(12, 4 * nrows))
-    fig.suptitle('Distribution of Key Features', fontsize=16, fontweight='bold')
-    axes = axes.flatten() if nrows * ncols > 1 else [axes]
+    for index, feature_name in enumerate(plot_features):
+        axes[index].hist(df[feature_name].dropna(), bins=40, color='skyblue', edgecolor='black', alpha=0.7)
+        axes[index].set_title(f'Distribution of {feature_name}')
+        axes[index].set_xlabel(feature_name)
+        axes[index].set_ylabel('Frequency')
+        axes[index].grid(axis='y', alpha=0.3)
 
-    for idx, feature_name in enumerate(available_features):
-        axes[idx].hist(df[feature_name].dropna(), bins=50, color='skyblue', edgecolor='black', alpha=0.7)
-        axes[idx].set_title(f'Distribution of {feature_name}', fontweight='bold')
-        axes[idx].set_xlabel(feature_name)
-        axes[idx].set_ylabel('Frequency')
-        axes[idx].grid(axis='y', alpha=0.3)
-
-    for idx in range(len(available_features), len(axes)):
-        axes[idx].set_visible(False)
+    for index in range(len(plot_features), len(axes)):
+        axes[index].set_visible(False)
 
     plt.tight_layout()
     plt.savefig('distribution_plots.png', dpi=300, bbox_inches='tight')
     plt.close()
-    print("Distribution plots saved as 'distribution_plots.png'")
+    print("Saved distribution plots to 'distribution_plots.png'")
 
 
 def plot_correlation(df):
-    """
-    Show a heatmap of correlations between features.
-    
-    Parameters
-    ----------
-    df : pd.DataFrame
-        Cleaned dataset
-    """
+    """Plot the correlation heatmap for numeric variables."""
     print("\n" + "=" * 60)
     print("PLOTTING CORRELATION HEATMAP")
     print("=" * 60)
 
-    numerical_cols = df.select_dtypes(include=['int64', 'float64']).columns
-    if len(numerical_cols) == 0:
-        print("No numeric columns available for correlation heatmap")
+    numeric_columns = df.select_dtypes(include=['int64', 'float64']).columns
+    if len(numeric_columns) == 0:
+        print("No numeric columns found for correlation plotting")
         return
 
-    corr_matrix = df[numerical_cols].corr()
-
-    plt.figure(figsize=(min(12, len(numerical_cols)*1.2), min(10, len(numerical_cols)*1.2)))
-    sns.heatmap(corr_matrix, annot=True, fmt='.2f', cmap='coolwarm', center=0, square=True, linewidths=1, cbar_kws={"shrink": 0.8})
-    plt.title('Correlation Heatmap of Numerical Features', fontsize=14, fontweight='bold', pad=20)
+    correlation_matrix = df[numeric_columns].corr()
+    plt.figure(figsize=(min(12, len(numeric_columns) * 1.2), min(10, len(numeric_columns) * 1.2)))
+    sns.heatmap(correlation_matrix, annot=True, fmt='.2f', cmap='coolwarm', center=0, square=True, linewidths=1, cbar_kws={'shrink': 0.8})
+    plt.title('Correlation Heatmap of Numerical Features')
     plt.tight_layout()
     plt.savefig('correlation_heatmap.png', dpi=300, bbox_inches='tight')
     plt.close()
-    print("Correlation heatmap saved as 'correlation_heatmap.png'")
+    print("Saved correlation heatmap to 'correlation_heatmap.png'")
 
 
 def plot_target_distribution(df):
-    """
-    Show how many people have and do not have the disease.
-    
-    Parameters
-    ----------
-    df : pd.DataFrame
-        Cleaned dataset
-    """
+    """Plot the balance of the target class values."""
     print("\n" + "=" * 60)
     print("PLOTTING TARGET DISTRIBUTION")
     print("=" * 60)
 
     if 'cardio' not in df.columns:
-        print("Column 'cardio' is missing; skipping target distribution plot")
+        print("Target column 'cardio' not found")
         return
 
-    class_counts = df['cardio'].value_counts().sort_index()
-    labels = ['No Cardiovascular Disease (0)', 'Cardiovascular Disease (1)']
-    values = [class_counts.get(0, 0), class_counts.get(1, 0)]
+    counts = df['cardio'].value_counts().sort_index()
+    labels = ['No Disease (0)', 'Disease (1)']
+    values = [counts.get(0, 0), counts.get(1, 0)]
 
     plt.figure(figsize=(10, 6))
-    class_colors = ['#2ecc71', '#e74c3c']
-    bars = plt.bar(labels, values, color=class_colors, edgecolor='black', alpha=0.8)
+    bars = plt.bar(labels, values, color=['steelblue', 'lightcoral'], edgecolor='black', alpha=0.8)
 
     for bar in bars:
-        bar_height = bar.get_height()
-        percentage = (bar_height / len(df)) * 100 if len(df) > 0 else 0
-        plt.text(bar.get_x() + bar.get_width() / 2., bar_height,
-                 f'{int(bar_height)}\n({percentage:.1f}%)',
-                 ha='center', va='bottom', fontweight='bold')
+        height = bar.get_height()
+        percentage = (height / len(df) * 100) if len(df) > 0 else 0
+        plt.text(bar.get_x() + bar.get_width() / 2, height, f'{int(height)}\n({percentage:.1f}%)', ha='center', va='bottom')
 
-    plt.title('Target Variable Distribution (Cardiovascular Disease)', fontsize=14, fontweight='bold')
-    plt.ylabel('Count', fontsize=12)
-    plt.xlabel('Class', fontsize=12)
+    plt.title('Target Variable Distribution')
+    plt.ylabel('Count')
+    plt.xlabel('Class')
     plt.grid(axis='y', alpha=0.3)
     plt.tight_layout()
     plt.savefig('target_distribution.png', dpi=300, bbox_inches='tight')
-    print("Target distribution plot saved as 'target_distribution.png'")
-
-    print(f"\nTarget class distribution:")
-    print(f"  - No Disease (0): {values[0]} ({(values[0]/len(df)*100 if len(df) > 0 else 0):.1f}%)")
-    print(f"  - Disease (1): {values[1]} ({(values[1]/len(df)*100 if len(df) > 0 else 0):.1f}%)")
     plt.close()
+    print("Saved target distribution to 'target_distribution.png'")
 
 
 def run_all_visualizations(df):
-    """
-    Execute all EDA visualizations in sequence.
-    
-    Parameters
-    ----------
-    df : pd.DataFrame
-        Cleaned dataset
-    """
+    """Run all exploratory data plots."""
     plot_distributions(df)
     plot_correlation(df)
     plot_target_distribution(df)
+
+
+def plot_confusion_matrix(cm, model_name):
+    """Plot a confusion matrix for a trained model."""
+    plt.figure(figsize=(8, 6))
+    sns.heatmap(cm, annot=True, fmt='d', cmap='Blues', xticklabels=['No Disease', 'Disease'], yticklabels=['No Disease', 'Disease'])
+    plt.title(f'Confusion Matrix - {model_name}')
+    plt.ylabel('True Label')
+    plt.xlabel('Predicted Label')
+    plt.tight_layout()
+    plt.savefig('confusion_matrix.png', dpi=300, bbox_inches='tight')
+    plt.close()
+    print("Saved confusion matrix to 'confusion_matrix.png'")
+
+
+def plot_f1_comparison(cv_results):
+    """Plot the F1-score comparison for all models."""
+    if isinstance(cv_results, dict):
+        models = list(cv_results.keys())
+        f1_values = [cv_results[model]['f1_mean'] for model in models]
+        f1_errors = [cv_results[model]['f1_std'] for model in models]
+    else:
+        models = cv_results['Model'].tolist()
+        f1_values = [float(value.split(' ± ')[0]) for value in cv_results['F1-Score'].tolist()]
+        f1_errors = [float(value.split(' ± ')[1]) for value in cv_results['F1-Score'].tolist()]
+
+    plt.figure(figsize=(10, 6))
+    bars = plt.bar(models, f1_values, yerr=f1_errors, capsize=5, color='skyblue', edgecolor='black')
+    plt.title('Model F1-Score Comparison')
+    plt.ylabel('F1-Score')
+    plt.xlabel('Model')
+    plt.ylim(0, 1)
+    plt.grid(axis='y', alpha=0.3)
+
+    for bar, mean, std in zip(bars, f1_values, f1_errors):
+        plt.text(bar.get_x() + bar.get_width() / 2, bar.get_height() + 0.01, f'{mean:.3f}±{std:.3f}', ha='center', va='bottom')
+
+    plt.tight_layout()
+    plt.savefig('f1_comparison.png', dpi=300, bbox_inches='tight')
+    plt.close()
+    print("Saved F1 comparison plot to 'f1_comparison.png'")
+
+
+def plot_model_comparison(results_df):
+    """Plot recall and F1-score for cross-validation results."""
+    if results_df.empty:
+        print("No results available for model comparison plot")
+        return
+
+    models = results_df['Model']
+    recall_values = [float(value.split(' ± ')[0]) for value in results_df['Recall'].tolist()]
+    f1_values = [float(value.split(' ± ')[0]) for value in results_df['F1-Score'].tolist()]
+
+    plt.figure(figsize=(12, 6))
+    positions = range(len(models))
+    width = 0.35
+
+    plt.bar([pos - width / 2 for pos in positions], recall_values, width, label='Recall', color='steelblue')
+    plt.bar([pos + width / 2 for pos in positions], f1_values, width, label='F1-Score', color='lightgreen')
+
+    plt.xticks(positions, models, rotation=45, ha='right')
+    plt.ylabel('Score')
+    plt.ylim(0, 1)
+    plt.title('Cross-Validation Recall versus F1-Score')
+    plt.legend()
+    plt.grid(axis='y', alpha=0.3)
+    plt.tight_layout()
+    plt.savefig('model_comparison.png', dpi=300, bbox_inches='tight')
+    plt.close()
+    print("Saved model comparison plot to 'model_comparison.png'")
+
+
+def plot_threshold_tuning(threshold_df, model_name):
+    """Plot how precision, recall, and F1 change with the decision threshold."""
+    if threshold_df.empty:
+        print("No threshold tuning results to plot")
+        return
+
+    plt.figure(figsize=(10, 6))
+    plt.plot(threshold_df['Threshold'], threshold_df['Precision'], marker='o', label='Precision')
+    plt.plot(threshold_df['Threshold'], threshold_df['Recall'], marker='o', label='Recall')
+    plt.plot(threshold_df['Threshold'], threshold_df['F1-Score'], marker='o', label='F1-Score')
+    plt.title(f'Threshold Tuning for {model_name}')
+    plt.xlabel('Threshold')
+    plt.ylabel('Score')
+    plt.ylim(0, 1)
+    plt.xticks(threshold_df['Threshold'])
+    plt.grid(axis='y', alpha=0.3)
+    plt.legend()
+    plt.tight_layout()
+    file_name = f'threshold_tuning_{model_name.lower().replace(" ", "_")}.png'
+    plt.savefig(file_name, dpi=300, bbox_inches='tight')
+    plt.close()
+    print(f"Saved threshold tuning plot to '{file_name}'")
+
+
+def plot_feature_importance(importance_df, model_name):
+    """Plot the most important features for a tree-based model."""
+    if importance_df is None or importance_df.empty:
+        print(f"No importance data available for {model_name}")
+        return
+
+    plt.figure(figsize=(10, 6))
+    sns.barplot(x='importance', y='feature', data=importance_df.head(10), palette='viridis')
+    plt.title(f'Feature Importance - {model_name}')
+    plt.xlabel('Importance')
+    plt.ylabel('Feature')
+    plt.tight_layout()
+    file_name = f'feature_importance_{model_name.lower().replace(" ", "_")}.png'
+    plt.savefig(file_name, dpi=300, bbox_inches='tight')
+    plt.close()
+    print(f"Saved feature importance to '{file_name}'")
+

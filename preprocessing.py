@@ -1,88 +1,54 @@
-"""Preprocessing Module.
+"""Preprocessing module.
 
-Prepares data for machine learning models.
-Converts age and scales all features.
+Prepare the cleaned dataset for model training.
 """
 
-import pandas as pd
-import numpy as np
 from sklearn.preprocessing import StandardScaler
+from sklearn.model_selection import train_test_split
 
 
 def preprocess_data(df):
-    """
-    Convert age to years and scale all features.
-    
-    Prepares the data for model training by converting age from days to years
-    and scaling all numerical features so they have mean 0 and std 1.
-    
-    Parameters
-    ----------
-    df : pd.DataFrame
-        Cleaned dataset with age in days
-        
-    Returns
-    -------
-    tuple
-        (X_processed, y) - scaled features and target variable
-    """
+    """Convert age, scale features, and split into train and test sets."""
     print("\n" + "=" * 60)
     print("DATA PREPROCESSING")
     print("=" * 60)
-    
-    # Make a copy
-    df_ready = df.copy()
-    
-    # Convert age from days to years
-    print("\n--- Converting Age Units ---")
-    df_ready['age'] = df_ready['age'] // 365
-    print(f"Age range: {df_ready['age'].min()} - {df_ready['age'].max()} years")
-    print(f"Mean age: {df_ready['age'].mean():.1f} years")
-    
-    # Split features and target
-    print("\n--- Feature-Target Separation ---")
-    # Remove 'id' column if it exists
-    if 'id' in df_ready.columns:
-        df_ready = df_ready.drop(['id'], axis=1)
-    if 'cardio' not in df_ready.columns:
-        raise KeyError("Target column 'cardio' not found in data")
-    feature_matrix = df_ready.drop(['cardio'], axis=1)
-    target_vector = df_ready['cardio']
-    
-    print(f"Feature matrix shape: {feature_matrix.shape}")
-    print(f"Target vector shape: {target_vector.shape}")
-    print(f"\nAvailable features: {list(feature_matrix.columns)}")
-    
-    # Show types
-    print("\n--- Feature Data Types ---")
-    print(feature_matrix.dtypes)
-    
-    # Get number columns to scale
-    num_feature_cols = feature_matrix.select_dtypes(
-        include=['int64', 'float64']
-    ).columns.tolist()
-    print(f"\nNumber columns to scale: {num_feature_cols}")
-    
-    # Scale all number columns
-    print("\n--- Scaling Numerical Features ---")
+
+    data_frame = df.copy()
+
+    print("\nConverting age from days to years")
+    data_frame['age'] = data_frame['age'] // 365
+    print(f"Age range: {data_frame['age'].min()} to {data_frame['age'].max()} years")
+
+    if 'id' in data_frame.columns:
+        data_frame = data_frame.drop('id', axis=1)
+
+    if 'cardio' not in data_frame.columns:
+        raise KeyError("Target column 'cardio' is missing from the dataset")
+
+    feature_data = data_frame.drop('cardio', axis=1)
+    target_data = data_frame['cardio']
+
+    print(f"Feature matrix shape: {feature_data.shape}")
+    print(f"Target vector shape: {target_data.shape}")
+
+    numeric_columns = feature_data.select_dtypes(include=['int64', 'float64']).columns.tolist()
+    print(f"Numeric columns to scale: {numeric_columns}")
+
     scaler = StandardScaler()
-    feature_matrix_scaled = feature_matrix.copy()
-    feature_matrix_scaled[num_feature_cols] = scaler.fit_transform(
-        feature_matrix[num_feature_cols]
+    feature_data_scaled = feature_data.copy()
+    feature_data_scaled[numeric_columns] = scaler.fit_transform(feature_data[numeric_columns])
+
+    print("Scaling completed")
+
+    X_train, X_test, y_train, y_test = train_test_split(
+        feature_data_scaled,
+        target_data,
+        test_size=0.2,
+        random_state=42,
+        stratify=target_data
     )
-    
-    print("Features scaled successfully")
-    print(f"\nScaled features check:")
-    scaled_means = feature_matrix_scaled[num_feature_cols].mean().values
-    scaled_stds = feature_matrix_scaled[num_feature_cols].std().values
-    print(f"  Average (should be ~0): {scaled_means}")
-    print(f"  Standard Dev (should be ~1): {scaled_stds}")
-    
-    # Done
-    print("\n--- Preprocessing Done ---")
-    print(f"Input: {feature_matrix.shape}")
-    print(f"Output: {feature_matrix_scaled.shape}")
-    print(f"Target: {target_vector.shape}")
-    print(f"Data ready for models")
-    
-    return feature_matrix_scaled, target_vector
+
+    print(f"Training samples: {X_train.shape[0]}")
+    print(f"Test samples: {X_test.shape[0]}")
+
+    return X_train, X_test, y_train, y_test, feature_data_scaled.columns.tolist()
